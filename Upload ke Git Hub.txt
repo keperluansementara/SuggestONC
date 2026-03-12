@@ -1,0 +1,14 @@
+Workflow ke depannya (kalau kamu update aplikasi)
+
+Kalau kamu mengubah kode React, cukup lakukan ini:
+
+git add .
+git commit -m "update fitur"
+git push
+
+lalu deploy ulang:
+
+npm run build
+npm run deploy
+
+Website GitHub Pages akan otomatis update.

@@ -74,11 +74,60 @@ const checkDistanceWarning = (distanceStr) => {
   return false; // Hijau jika <= 50 meter
 };
 
-// --- HELPER: FORMAT WAKTU (Agar jam tidak pakai format ISO) ---
+// --- HELPER: SMART PARSER TANGGAL (Mengatasi perbedaan format HP ID & US) ---
+const parseCustomDate = (dateStr) => {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+
+  // Jika format sudah baku ISO (mengandung huruf T)
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Deteksi format manual (M/D/YYYY atau D/M/YYYY)
+  const dateMatch = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (dateMatch) {
+    let p1 = parseInt(dateMatch[1], 10);
+    let p2 = parseInt(dateMatch[2], 10);
+    let year = parseInt(dateMatch[3], 10);
+    if (year < 100) year += 2000;
+
+    // Deteksi jika HP menggunakan bahasa Inggris (biasanya ada AM/PM)
+    const isUSLocale = str.toLowerCase().includes('am') || str.toLowerCase().includes('pm');
+
+    let day, month;
+    if (p1 > 12) { day = p1; month = p2; }
+    else if (p2 > 12) { month = p1; day = p2; }
+    else {
+      if (isUSLocale) { month = p1; day = p2; } // US Locale: Bulan/Tanggal
+      else { day = p1; month = p2; } // ID Locale: Tanggal/Bulan
+    }
+
+    let hours = 0, minutes = 0, seconds = 0;
+    const timeMatch = str.match(/(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1], 10);
+      minutes = parseInt(timeMatch[2], 10);
+      seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+
+      if (str.toLowerCase().includes('pm') && hours < 12) hours += 12;
+      if (str.toLowerCase().includes('am') && hours === 12) hours = 0;
+    }
+
+    const parsedDate = new Date(year, month - 1, day, hours, minutes, seconds);
+    if (!isNaN(parsedDate.getTime())) return parsedDate;
+  }
+
+  return new Date(str); // Fallback ke sistem standar
+};
+
+// --- HELPER: FORMAT WAKTU (Ubah ke bahasa dan format rapi) ---
 const formatDateTime = (dateStr) => {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr; // Jika format gagal diparse, kembalikan teks aslinya
+  if (!dateStr || dateStr === '-') return '-';
+  const d = parseCustomDate(dateStr);
+  if (!d || isNaN(d.getTime())) return dateStr;
+
   return d.toLocaleString('id-ID', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -548,7 +597,7 @@ export default function App() {
     setIsSubmitting(true);
     const distance = calculateDistance(formData.gps.lat, formData.gps.lng, parseFloat(selectedStore?.latitude), parseFloat(selectedStore?.longitude));
     const payload = {
-      timestamp: new Date().toLocaleString(),
+      timestamp: new Date().toISOString(), // UPDATE PENTING: Menggunakan format ISO agar universal dan tidak error lagi
       storeName: selectedStore?.name || '',
       updatedStoreName: formData.updatedStoreName,
       region: selectedStore?.Region || '',
@@ -594,23 +643,10 @@ export default function App() {
     window.open(url, '_blank');
   };
 
-  // FUNGSI SORTING TIMESTAMP
+  // FUNGSI SORTING TIMESTAMP YANG DIPERBARUI
   const parseDateForSort = (dateStr) => {
-    if (!dateStr) return 0;
-    let time = new Date(dateStr).getTime();
-    if (!isNaN(time)) return time;
-    const match = String(dateStr).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})[^\d]+(\d{1,2})[\:\.](\d{1,2})[\:\.]?(\d{1,2})?/);
-    if (match) {
-      const year = match[3].length === 2 ? `20${match[3]}` : match[3];
-      const month = match[2].padStart(2, '0');
-      const day = match[1].padStart(2, '0');
-      const hour = match[4].padStart(2, '0');
-      const min = match[5].padStart(2, '0');
-      const sec = match[6] ? match[6].padStart(2, '0') : '00';
-      time = new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`).getTime();
-      if (!isNaN(time)) return time;
-    }
-    return 0;
+    const d = parseCustomDate(dateStr);
+    return d && !isNaN(d.getTime()) ? d.getTime() : 0;
   };
 
   // LOGIKA PENYARINGAN (FILTER)
