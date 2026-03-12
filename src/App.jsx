@@ -878,10 +878,9 @@ export default function App() {
               <RefreshCw size={18} className={loading ? 'animate-spin text-blue-600' : ''} />
             </button>
 
-            {/* --- BAGIAN LOGO KANAN ATAS YANG DIRUBAH --- */}
-            {/* Ganti URL_LOGO_ANDA di bawah ini dengan link gambar logo Anda. */}
+            {/* --- BAGIAN LOGO KANAN ATAS --- */}
             <img
-              src="/SHP.png" // DITAMBAHKAN GARIS MIRING DISINI
+              src="/SHP.png"
               alt="Profile"
               className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5"
             />
@@ -1362,64 +1361,93 @@ export default function App() {
 
                 {/* VIEW 6: ABOUT (TENTANG APLIKASI) */}
                 {activeMenu === 'about' && (
-                  <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pt-4">
+                  <div className="max-w-4xl mx-auto animate-in fade-in duration-500 pt-4 pb-12">
                     <div className="bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden">
-                      {/* Banner Header */}
-                      <div className="h-32 bg-gradient-to-r from-blue-600 to-cyan-500 relative">
-                        <div className="absolute -bottom-10 left-8 w-20 h-20 bg-white rounded-2xl shadow-md border-4 border-white flex items-center justify-center z-10">
-                          <Globe size={40} className="text-blue-500" />
+                      {/* Banner Header dengan Logo */}
+                      <div className="h-40 bg-gradient-to-r from-blue-600 to-cyan-500 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay"></div>
+                        <div className="absolute -bottom-12 left-8 w-24 h-24 bg-white rounded-[1.5rem] shadow-lg border-4 border-white flex items-center justify-center z-10 p-2 overflow-hidden">
+                          <img src="/SHP.png" alt="SHP Logo" className="w-full h-full object-contain" />
                         </div>
-                        <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-white text-[10px] font-black uppercase tracking-widest">
-                          Versi 1.0.0
+                        <div className="absolute top-4 right-4 flex gap-2">
+                          <span className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-white text-[10px] font-black uppercase tracking-widest">
+                            Internal Use Only
+                          </span>
+                          <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-white text-[10px] font-black uppercase tracking-widest">
+                            Versi 1.1.0
+                          </span>
                         </div>
                       </div>
 
                       {/* Content About */}
-                      <div className="pt-16 p-8">
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-2 uppercase">Aplikasi Survei & Validasi Toko</h3>
-                        <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
-                          Sistem informasi berbasis Geographic Information System (GIS) yang dirancang khusus untuk mempermudah proses pemetaan, pencatatan data lapangan, pengambilan dokumentasi, dan validasi lokasi toko secara real-time yang terintegrasi penuh dengan Cloud (Google Workspace).
+                      <div className="pt-16 p-8 md:p-10">
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight mb-3 uppercase">Aplikasi Survei & Validasi Toko</h3>
+                        <p className="text-slate-600 text-sm font-medium leading-relaxed mb-8 max-w-3xl">
+                          Sistem informasi berbasis <strong>Geographic Information System (GIS)</strong> yang dirancang khusus untuk mempermudah proses pemetaan, pencatatan data lapangan, pengambilan dokumentasi, dan validasi lokasi toko secara real-time. Aplikasi ini terintegrasi penuh dengan <strong>Google Workspace (Google Sheets & Drive)</strong> sebagai database cloud untuk memastikan data yang dikumpulkan oleh surveyor di lapangan langsung tersedia bagi tim back-office tanpa delay.
                         </p>
 
                         {/* Info Cards */}
-                        <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-4 items-center">
-                            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                              <ShieldCheck size={24} />
+                        <div className="grid sm:grid-cols-2 gap-5 mb-10">
+                          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex gap-4 items-center group hover:bg-slate-100 transition-colors">
+                            <div className="w-14 h-14 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                              <ShieldCheck size={28} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Project Name</p>
-                              <p className="text-sm font-bold text-slate-700 leading-tight">Tools Suggest ONC<br />by SHP</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Project Name</p>
+                              <p className="text-base font-bold text-slate-700 leading-tight">Tools Suggest ONC<br />by SHP</p>
                             </div>
                           </div>
 
-                          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-4 items-center">
-                            <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-200">
-                              <User size={24} />
+                          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex gap-4 items-center group hover:bg-blue-100 transition-colors">
+                            <div className="w-14 h-14 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                              <User size={28} />
                             </div>
                             <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">Developed & Designed By</p>
-                              <p className="text-sm font-black text-blue-900 uppercase">Suryo Hadi Prakoso</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1">Developed & Designed By</p>
+                              <p className="text-base font-black text-blue-900 uppercase">Suryo Hadi Prakoso</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Fitur Utama List */}
-                        <div className="border-t border-slate-100 pt-6">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Fitur Utama Sistem</h4>
-                          <div className="grid sm:grid-cols-2 gap-y-3 gap-x-6">
+                        {/* Fitur Utama List (ENHANCED) */}
+                        <div className="border-t border-slate-100 pt-8">
+                          <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                            <LayoutGrid size={16} /> Keunggulan & Fitur Utama Sistem
+                          </h4>
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[
-                              'Global Map & Cluster Location', 'Smart Location Validasi (Haversine)',
-                              'Real-time Cloud Sync Database', 'Direct Photo & Signature Capture',
-                              'Fallback GPS Mode', 'Live Dashboard & Data Gallery'
+                              { icon: Map, title: 'Global Map & Cluster', desc: 'Visualisasi seluruh titik toko dalam satu peta interaktif untuk memudahkan perencanaan rute.' },
+                              { icon: Crosshair, title: 'Smart Location Validation', desc: 'Validasi jarak otomatis menggunakan algoritma Haversine untuk mencegah manipulasi lokasi survei.' },
+                              { icon: RefreshCw, title: 'Real-time Cloud Sync', desc: 'Data langsung tersimpan dan tersinkronisasi dengan Google Sheets tanpa perlu rekap manual.' },
+                              { icon: Camera, title: 'Direct Photo Capture', desc: 'Pengambilan foto toko yang langsung ter-upload dan terkonversi menjadi link gambar yang ringan.' },
+                              { icon: PenTool, title: 'Digital Signature', desc: 'Fitur tanda tangan digital langsung di layar perangkat untuk bukti validasi kunjungan.' },
+                              { icon: BarChart3, title: 'Live Dashboard Analytics', desc: 'Pantau progres survei harian, sisa target, dan pencapaian ONC secara real-time.' }
                             ].map((feature, idx) => (
-                              <div key={idx} className="flex items-center gap-2">
-                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                                <span className="text-xs font-bold text-slate-600">{feature}</span>
+                              <div key={idx} className="flex gap-4 p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md hover:border-blue-100 transition-all group">
+                                <div className="mt-1 w-8 h-8 rounded-lg bg-slate-50 text-blue-500 flex items-center justify-center shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                  <feature.icon size={16} />
+                                </div>
+                                <div>
+                                  <h5 className="text-xs font-bold text-slate-800 uppercase mb-1">{feature.title}</h5>
+                                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">{feature.desc}</p>
+                                </div>
                               </div>
                             ))}
                           </div>
                         </div>
+
+                        {/* Tech Stack */}
+                        <div className="mt-10 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-bold text-center text-slate-400 uppercase tracking-widest mb-4">Teknologi yang Digunakan</p>
+                          <div className="flex flex-wrap justify-center gap-3 md:gap-4 opacity-80">
+                            <span className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm">React.js</span>
+                            <span className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm">Tailwind CSS</span>
+                            <span className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm">Leaflet Maps API</span>
+                            <span className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm">Google Apps Script</span>
+                            <span className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm">Haversine Formula</span>
+                          </div>
+                        </div>
+
                       </div>
                     </div>
                   </div>
