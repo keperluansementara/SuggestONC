@@ -872,11 +872,37 @@ export default function App() {
         {/* MAIN CONTENT */}
         <main className="flex-1 overflow-y-auto bg-[#f8fafc]">
 
-          <div className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30 shadow-sm flex items-center gap-2">
-            {menuItems.find(m => m.id === activeMenu)?.icon && React.createElement(menuItems.find(m => m.id === activeMenu).icon, { size: 18, className: "text-slate-400" })}
-            <h2 className="text-sm font-bold text-slate-700 tracking-wide uppercase">
-              {menuItems.find(m => m.id === activeMenu)?.label}
-            </h2>
+          <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sticky top-0 z-30 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {menuItems.find(m => m.id === activeMenu)?.icon && React.createElement(menuItems.find(m => m.id === activeMenu).icon, { size: 18, className: "text-slate-400" })}
+              <h2 className="text-sm font-bold text-slate-700 tracking-wide uppercase">
+                {menuItems.find(m => m.id === activeMenu)?.label}
+              </h2>
+            </div>
+
+            {/* AKSI HEADER KHUSUS TAB LIST VALIDASI */}
+            {activeMenu === 'list' && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={toggleSortByNearest}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all border ${sortByNearest ? 'bg-amber-50 text-amber-600 border-amber-300 shadow-sm ring-1 ring-amber-500/20' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                  title="Urutkan Terdekat"
+                >
+                  {isLocatingSort ? <RefreshCw size={14} className="animate-spin text-amber-500 shrink-0" /> : <Crosshair size={14} className={`shrink-0 ${sortByNearest ? "text-amber-600" : "text-slate-400"}`} />}
+                  <span className="hidden sm:inline">{sortByNearest ? 'Terdekat (ON)' : 'Urutkan Terdekat'}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsFilterModalOpen(true)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all border ${selectedKecamatans.length > 0 ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                  title="Filter Kecamatan"
+                >
+                  <Filter size={14} className="shrink-0" />
+                  <span className="hidden sm:inline">Kecamatan {selectedKecamatans.length > 0 && `(${selectedKecamatans.length})`}</span>
+                  <span className="sm:hidden">Filter {selectedKecamatans.length > 0 && `(${selectedKecamatans.length})`}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="p-4 md:p-6">
@@ -922,23 +948,6 @@ export default function App() {
                             </button>
                           ))}
                         </div>
-
-                        {/* TOMBOL SORT BY NEAREST */}
-                        <button
-                          onClick={toggleSortByNearest}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${sortByNearest ? 'bg-amber-50 text-amber-600 border-amber-300 shadow-sm ring-2 ring-amber-500/20' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                        >
-                          {isLocatingSort ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Crosshair size={14} className={sortByNearest ? "text-amber-600" : "text-slate-400"} />}
-                          {sortByNearest ? 'Terdekat (ON)' : 'Urutkan Terdekat'}
-                        </button>
-
-                        <button
-                          onClick={() => setIsFilterModalOpen(true)}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${selectedKecamatans.length > 0 ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                        >
-                          <Filter size={14} />
-                          Kecamatan {selectedKecamatans.length > 0 && `(${selectedKecamatans.length})`}
-                        </button>
                       </div>
                     </div>
 
@@ -1806,12 +1815,16 @@ export default function App() {
               <div className="flex flex-wrap gap-2.5">
                 <button
                   onClick={() => setSelectedKecamatans([])}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase transition-all border ${selectedKecamatans.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase transition-all border flex items-center gap-2 ${selectedKecamatans.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                 >
                   Semua Kecamatan
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${selectedKecamatans.length === 0 ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    {stores.length}
+                  </span>
                 </button>
                 {uniqueKecamatans.map(kec => {
                   const isActive = selectedKecamatans.includes(kec);
+                  const count = groupedDataFull[kec] ? groupedDataFull[kec].length : 0;
                   return (
                     <button
                       key={kec}
@@ -1826,6 +1839,9 @@ export default function App() {
                     >
                       {isActive && <Check size={14} strokeWidth={3} className="text-blue-600" />}
                       {kec}
+                      <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${isActive ? 'bg-blue-200 text-blue-800' : 'bg-slate-100 text-slate-500'}`}>
+                        {count}
+                      </span>
                     </button>
                   )
                 })}
