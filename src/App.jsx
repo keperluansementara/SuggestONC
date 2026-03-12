@@ -408,7 +408,7 @@ const StoreCard = ({ store, onClick }) => {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 pt-6 z-10">
             <p className="text-[9px] font-medium text-white/90 truncate flex items-center gap-1">
               <CheckCircle2 size={10} className="text-emerald-400" />
-              {store.timestamp}
+              {formatDateTime(store.timestamp)}
             </p>
           </div>
         )}
@@ -664,7 +664,16 @@ export default function App() {
     filteredStores.sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
   }
 
+  // Grouping Data berdasarkan filter saat ini
   const groupedData = filteredStores.reduce((acc, s) => { const k = s.Region || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+
+  // Grouping Data Keseluruhan (Absolute) khusus untuk kalkulasi Dashboard
+  const groupedDataFull = stores.reduce((acc, s) => {
+    const k = s.Region || 'LAINNYA';
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(s);
+    return acc;
+  }, {});
 
   const galleryStores = stores.filter(s => s.isDone && s.photo).sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
   const successStores = stores.filter(s => s.isDone).sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
@@ -680,7 +689,7 @@ export default function App() {
           `"${store.name || ''}"`,
           `"${store.Region || ''}"`,
           `"${store.surveyor || ''}"`,
-          `"${store.timestamp || ''}"`,
+          `"${formatDateTime(store.timestamp) || ''}"`, // Ubah ISO jadi format rapi di CSV
           `"${store['Status Visit'] || store.status || 'Sudah Tersurvei'}"`,
           `"${store['Jarak Validasi'] || store.distanceValidation || '-'}"`,
           `"${store['ONC?'] || store.onc || '-'}"`,
@@ -705,9 +714,9 @@ export default function App() {
     { id: 'map', label: 'Map of Location', icon: MapPin },
     { id: 'gallery', label: 'Data gallery', icon: ImageIcon },
     { id: 'success', label: 'List Toko Sukses', icon: CheckSquare },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 }, // Tab baru Dashboard
     { id: 'about', label: 'About', icon: Info },
-    { id: 'feedback', label: 'Feedback', icon: MessageSquare },
-    { id: 'apps', label: 'App Gallery', icon: LayoutGrid },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquare }
   ];
 
   return (
@@ -899,7 +908,7 @@ export default function App() {
                                   <User size={10} /> {selectedMapStore.surveyor}
                                 </div>
                                 <div className="absolute bottom-2 right-2 bg-emerald-500/90 backdrop-blur-md text-white px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                                  <CheckCircle2 size={10} /> {selectedMapStore.timestamp?.split(',')[0]}
+                                  <CheckCircle2 size={10} /> {formatDateTime(selectedMapStore.timestamp).split(' ')[0]}
                                 </div>
                               </div>
                             </div>
@@ -1085,7 +1094,107 @@ export default function App() {
                   </div>
                 )}
 
-                {/* VIEW 5: ABOUT (TENTANG APLIKASI) */}
+                {/* VIEW 5: DASHBOARD SEDERHANA */}
+                {activeMenu === 'dashboard' && (
+                  <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-6">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-100 shadow-sm">
+                        <BarChart3 size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Dashboard Overview</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Ringkasan Progres Survei & ONC</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                      {/* Card Total */}
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 bg-slate-50 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4 border border-slate-200"><Target size={20} /></div>
+                          <div>
+                            <p className="text-3xl font-black text-slate-800">{stores.length}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Target</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Selesai */}
+                      <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200"><CheckCircle2 size={20} /></div>
+                            <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-md">{stores.length ? ((successStores.length / stores.length) * 100).toFixed(0) : 0}%</span>
+                          </div>
+                          <div>
+                            <p className="text-3xl font-black text-emerald-600">{successStores.length}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Tervalidasi</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card ONC Yes */}
+                      <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 bg-purple-50 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 mb-4 border border-purple-200"><Target size={20} /></div>
+                          <div>
+                            <p className="text-3xl font-black text-purple-600">{successStores.filter(s => s.onc === 'Yes').length}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ONC (YES)</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card ONC No */}
+                      <div className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 bg-rose-50 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 mb-4 border border-rose-200"><X size={20} /></div>
+                          <div>
+                            <p className="text-3xl font-black text-rose-600">{successStores.filter(s => s.onc === 'No').length}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ONC (NO)</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Region Progress List */}
+                    <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-2 mb-6">
+                        <MapPin size={16} className="text-blue-500" />
+                        <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.15em]">Progres Per Region</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+                        {Object.keys(groupedDataFull).sort().map(region => {
+                          const totalInRegion = groupedDataFull[region].length;
+                          const doneInRegion = groupedDataFull[region].filter(s => s.isDone).length;
+                          const percent = totalInRegion > 0 ? (doneInRegion / totalInRegion) * 100 : 0;
+                          return (
+                            <div key={region} className="flex flex-col gap-2">
+                              <div className="flex justify-between items-end">
+                                <span className="text-xs font-black text-slate-700 uppercase">{region}</span>
+                                <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">{doneInRegion} / {totalInRegion} ({percent.toFixed(0)}%)</span>
+                              </div>
+                              <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000 relative" style={{ width: `${percent}%` }}>
+                                  {percent > 5 && (
+                                    <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)' }}></div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* VIEW 6: ABOUT (TENTANG APLIKASI) */}
                 {activeMenu === 'about' && (
                   <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pt-4">
                     <div className="bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden">
@@ -1150,7 +1259,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* VIEW 6: FEEDBACK */}
+                {/* VIEW 7: FEEDBACK */}
                 {activeMenu === 'feedback' && (
                   <div className="max-w-3xl mx-auto animate-in fade-in duration-500 pt-4">
                     <div className="bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden p-6 md:p-10">
@@ -1197,14 +1306,6 @@ export default function App() {
                         </div>
                       </form>
                     </div>
-                  </div>
-                )}
-
-                {/* VIEW LAINNYA (Placeholder) */}
-                {['apps'].includes(activeMenu) && (
-                  <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
-                    <AlertTriangle size={48} className="mb-4 opacity-20" />
-                    <p className="font-medium text-sm">Halaman sedang dalam pengembangan.</p>
                   </div>
                 )}
               </>
