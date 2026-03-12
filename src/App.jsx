@@ -344,7 +344,7 @@ const GlobalMap = ({ stores, onMarkerClick }) => {
 };
 
 // --- KOMPONEN KARTU TOKO ---
-const StoreCard = ({ store, onClick }) => {
+const StoreCard = ({ store, onClick, currentDistance }) => {
   const lat = parseFloat(store.latitude);
   const lng = parseFloat(store.longitude);
 
@@ -386,6 +386,13 @@ const StoreCard = ({ store, onClick }) => {
               {store.isDone ? 'Sudah Tersurvei' : 'Belum Tersurvei'}
             </span>
           </div>
+
+          {/* TAMPILAN JARAK LIVE DARI LOKASI SAAT INI (Jika Sortir Terdekat Aktif) */}
+          {currentDistance !== undefined && currentDistance !== null && (
+            <div className="text-[10px] font-black text-amber-500 flex items-center gap-1 mt-1 bg-amber-50 inline-flex px-1.5 py-0.5 rounded border border-amber-100">
+              <MapPin size={10} /> {currentDistance < 1000 ? `${currentDistance} meter` : `${(currentDistance / 1000).toFixed(2)} km`} dari Anda
+            </div>
+          )}
         </div>
       </div>
 
@@ -431,6 +438,11 @@ export default function App() {
   // STATE BARU UNTUK FILTER KECAMATAN
   const [selectedKecamatans, setSelectedKecamatans] = useState([]);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // STATE BARU UNTUK SORT BY NEAREST
+  const [sortByNearest, setSortByNearest] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isLocatingSort, setIsLocatingSort] = useState(false);
 
   const [selectedStore, setSelectedStore] = useState(null);
   const [selectedMapStore, setSelectedMapStore] = useState(null);
@@ -656,6 +668,34 @@ export default function App() {
     return d && !isNaN(d.getTime()) ? d.getTime() : 0;
   };
 
+  // FUNGSI UNTUK TOGGLE DAN DAPATKAN LOKASI UNTUK SORTING
+  const toggleSortByNearest = () => {
+    if (sortByNearest) {
+      setSortByNearest(false);
+      return;
+    }
+    if (userLocation) {
+      setSortByNearest(true);
+      return;
+    }
+    if (!navigator.geolocation) {
+      alert("Browser tidak mendukung GPS"); return;
+    }
+    setIsLocatingSort(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setSortByNearest(true);
+        setIsLocatingSort(false);
+      },
+      (err) => {
+        alert("Gagal mendapatkan lokasi. Pastikan GPS aktif dan diizinkan.");
+        setIsLocatingSort(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
   // LOGIKA PENYARINGAN (FILTER)
   let filteredStores = stores.filter(s => {
     const searchMatch = !searchQuery || Object.values(s).some(value =>
@@ -667,13 +707,32 @@ export default function App() {
     return searchMatch && statusMatch && kecMatch;
   });
 
-  // LOGIKA PENGURUTAN: Jika Filter "SELESAI" aktif, urutkan data dari yang terbaru disurvei
-  if (statusFilter === 'done') {
+  // LOGIKA PENGURUTAN: Jika Filter "SELESAI" aktif (dan Sort by Nearest MATI), urutkan data dari yang terbaru disurvei
+  if (statusFilter === 'done' && !sortByNearest) {
     filteredStores.sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
   }
 
-  // Grouping Data berdasarkan filter saat ini (Berdasarkan Kecamatan)
-  const groupedData = filteredStores.reduce((acc, s) => { const k = s.kecamatan || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+  // KALKULASI JARAK UNTUK SORT BY NEAREST
+  if (sortByNearest && userLocation) {
+    filteredStores.forEach(store => {
+      store.currentDistance = calculateDistance(userLocation.lat, userLocation.lng, parseFloat(store.latitude), parseFloat(store.longitude));
+    });
+    filteredStores.sort((a, b) => {
+      const distA = a.currentDistance !== null && !isNaN(a.currentDistance) ? a.currentDistance : 9999999;
+      const distB = b.currentDistance !== null && !isNaN(b.currentDistance) ? b.currentDistance : 9999999;
+      return distA - distB;
+    });
+  }
+
+  // Grouping Data berdasarkan filter saat ini
+  let groupedData = {};
+  if (sortByNearest && userLocation) {
+    // Jika Sortir Terdekat AKTIF: Jangan di-grouping berdasarkan kecamatan, jadikan satu list lurus
+    groupedData = { 'DIURUTKAN DARI LOKASI ANDA': filteredStores };
+  } else {
+    // Jika MATI: Grouping normal berdasarkan kecamatan
+    groupedData = filteredStores.reduce((acc, s) => { const k = s.kecamatan || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+  }
 
   // Mengambil daftar kecamatan unik untuk pop-up filter
   const uniqueKecamatans = [...new Set(stores.map(s => s.kecamatan || 'LAINNYA'))].sort();
@@ -863,6 +922,16 @@ export default function App() {
                             </button>
                           ))}
                         </div>
+
+                        {/* TOMBOL SORT BY NEAREST */}
+                        <button
+                          onClick={toggleSortByNearest}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${sortByNearest ? 'bg-amber-50 text-amber-600 border-amber-300 shadow-sm ring-2 ring-amber-500/20' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        >
+                          {isLocatingSort ? <RefreshCw size={14} className="animate-spin text-amber-500" /> : <Crosshair size={14} className={sortByNearest ? "text-amber-600" : "text-slate-400"} />}
+                          {sortByNearest ? 'Terdekat (ON)' : 'Urutkan Terdekat'}
+                        </button>
+
                         <button
                           onClick={() => setIsFilterModalOpen(true)}
                           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${selectedKecamatans.length > 0 ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
@@ -876,13 +945,13 @@ export default function App() {
                     {Object.keys(groupedData).map(kecamatan => (
                       <div key={kecamatan} className="mb-10 animate-in fade-in duration-500">
                         <div className="flex items-center gap-3 mb-4">
-                          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{kecamatan}</h3>
-                          <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded-full text-slate-600">{groupedData[kecamatan].length} TOKO</span>
-                          <div className="h-px bg-slate-200 flex-1 ml-2" />
+                          <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${sortByNearest ? 'text-amber-600' : 'text-slate-400'}`}>{kecamatan}</h3>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sortByNearest ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}>{groupedData[kecamatan].length} TOKO</span>
+                          <div className={`h-px flex-1 ml-2 ${sortByNearest ? 'bg-amber-200' : 'bg-slate-200'}`} />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                           {groupedData[kecamatan].map(store => (
-                            <StoreCard key={store.id} store={store} onClick={(s) => { setSelectedStore(s); setIsFormOpen(true); }} />
+                            <StoreCard key={store.id} store={store} currentDistance={store.currentDistance} onClick={(s) => { setSelectedStore(s); setIsFormOpen(true); }} />
                           ))}
                         </div>
                       </div>
