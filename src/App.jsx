@@ -400,6 +400,7 @@ const StoreCard = ({ store, onClick, currentDistance }) => {
         {!isNaN(lat) && !isNaN(lng) ? (
           <iframe
             title={`map-${store.id}`}
+            loading="lazy" // <--- TAMBAHAN PENTING UNTUK PERFORMA
             className="w-full h-full pointer-events-none absolute inset-0"
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.003}%2C${lat - 0.003}%2C${lng + 0.003}%2C${lat + 0.003}&layer=mapnik&marker=${lat}%2C${lng}`}
           ></iframe>
@@ -443,6 +444,9 @@ export default function App() {
   const [sortByNearest, setSortByNearest] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [isLocatingSort, setIsLocatingSort] = useState(false);
+
+  // STATE BARU UNTUK LAZY LOAD (PAGINATION)
+  const [visibleCount, setVisibleCount] = useState(100);
 
   const [selectedStore, setSelectedStore] = useState(null);
   const [selectedMapStore, setSelectedMapStore] = useState(null);
@@ -561,6 +565,11 @@ export default function App() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // RESET JUMLAH TAMPILAN SETIAP KALI FILTER BERUBAH
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [searchQuery, statusFilter, selectedKecamatans, sortByNearest]);
 
   const getLocation = useCallback(() => {
     setFormData(prev => ({ ...prev, gpsLoading: true }));
@@ -724,14 +733,17 @@ export default function App() {
     });
   }
 
-  // Grouping Data berdasarkan filter saat ini
+  // POTONG DATA SESUAI BATAS VISIBLE COUNT (LAZY LOAD 100 TERATAS)
+  const displayedStores = filteredStores.slice(0, visibleCount);
+
+  // Grouping Data berdasarkan filter saat ini (Menggunakan displayedStores yang sudah dipotong)
   let groupedData = {};
   if (sortByNearest && userLocation) {
     // Jika Sortir Terdekat AKTIF: Jangan di-grouping berdasarkan kecamatan, jadikan satu list lurus
-    groupedData = { 'DIURUTKAN DARI LOKASI ANDA': filteredStores };
+    groupedData = { 'DIURUTKAN DARI LOKASI ANDA': displayedStores };
   } else {
     // Jika MATI: Grouping normal berdasarkan kecamatan
-    groupedData = filteredStores.reduce((acc, s) => { const k = s.kecamatan || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+    groupedData = displayedStores.reduce((acc, s) => { const k = s.kecamatan || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
   }
 
   // Mengambil daftar kecamatan unik untuk pop-up filter
@@ -965,6 +977,19 @@ export default function App() {
                         </div>
                       </div>
                     ))}
+
+                    {/* TOMBOL LAZY LOAD (LOAD MORE) */}
+                    {filteredStores.length > visibleCount && (
+                      <div className="flex justify-center mt-6 mb-12 animate-in fade-in">
+                        <button
+                          onClick={() => setVisibleCount(prev => prev + 100)}
+                          className="bg-white border border-slate-200 text-blue-600 px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-wider hover:bg-blue-50 hover:shadow-md transition-all flex items-center gap-2 active:scale-95"
+                        >
+                          <RefreshCw size={16} /> Tampilkan Lebih Banyak ({filteredStores.length - visibleCount} Toko Tersisa)
+                        </button>
+                      </div>
+                    )}
+
                     {Object.keys(groupedData).length === 0 && (
                       <div className="flex flex-col items-center justify-center h-[30vh] text-slate-400">
                         <Filter size={48} className="mb-4 opacity-20" />

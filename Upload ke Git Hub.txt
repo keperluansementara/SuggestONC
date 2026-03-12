@@ -3,8 +3,10 @@ Workflow ke depannya (kalau kamu update aplikasi)
 Kalau kamu mengubah kode React, cukup lakukan ini:
 
 git add .
-git commit -m "update fitur"
-git push
+git commit -m "update Fitur"
+git pull origin main --rebase
+git push origin main
+
 
 lalu deploy ulang:
 
