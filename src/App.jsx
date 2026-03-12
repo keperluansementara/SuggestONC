@@ -425,6 +425,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [galleryFilter, setGalleryFilter] = useState('all');
+  const [successFilter, setSuccessFilter] = useState('all');
+
+  // STATE BARU UNTUK FILTER KECAMATAN
+  const [selectedKecamatans, setSelectedKecamatans] = useState([]);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const [selectedStore, setSelectedStore] = useState(null);
   const [selectedMapStore, setSelectedMapStore] = useState(null);
@@ -521,6 +527,7 @@ export default function App() {
           id: index,
           name: storeName,
           Region: item['Region'] || item['region'] || '',
+          kecamatan: item['kecamatan'] || item['Kecamatan'] || 'LAINNYA', // <--- AMBIL KOLOM KECAMATAN
           latitude: item['Lat'] || item['latitude'] || item['Latitude'] || '',
           longitude: item['Long'] || item['longitude'] || item['Longitude'] || '',
           address: item['Alamat'] || item['address'] || '',
@@ -655,8 +662,9 @@ export default function App() {
       String(value).toLowerCase().includes(searchQuery.toLowerCase())
     );
     const statusMatch = statusFilter === 'all' ? true : (statusFilter === 'done' ? s.isDone : !s.isDone);
+    const kecMatch = selectedKecamatans.length === 0 || selectedKecamatans.includes(s.kecamatan || 'LAINNYA');
 
-    return searchMatch && statusMatch;
+    return searchMatch && statusMatch && kecMatch;
   });
 
   // LOGIKA PENGURUTAN: Jika Filter "SELESAI" aktif, urutkan data dari yang terbaru disurvei
@@ -664,12 +672,15 @@ export default function App() {
     filteredStores.sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
   }
 
-  // Grouping Data berdasarkan filter saat ini
-  const groupedData = filteredStores.reduce((acc, s) => { const k = s.Region || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+  // Grouping Data berdasarkan filter saat ini (Berdasarkan Kecamatan)
+  const groupedData = filteredStores.reduce((acc, s) => { const k = s.kecamatan || 'LAINNYA'; if (!acc[k]) acc[k] = []; acc[k].push(s); return acc; }, {});
+
+  // Mengambil daftar kecamatan unik untuk pop-up filter
+  const uniqueKecamatans = [...new Set(stores.map(s => s.kecamatan || 'LAINNYA'))].sort();
 
   // Grouping Data Keseluruhan (Absolute) khusus untuk kalkulasi Dashboard
   const groupedDataFull = stores.reduce((acc, s) => {
-    const k = s.Region || 'LAINNYA';
+    const k = s.kecamatan || 'LAINNYA';
     if (!acc[k]) acc[k] = [];
     acc[k].push(s);
     return acc;
@@ -677,14 +688,18 @@ export default function App() {
 
   const galleryStores = stores.filter(s => s.isDone && s.photo).sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
   const successStores = stores.filter(s => s.isDone).sort((a, b) => parseDateForSort(b.timestamp) - parseDateForSort(a.timestamp));
+
+  const filteredGalleryStores = galleryStores.filter(s => galleryFilter === 'all' ? true : s.onc === galleryFilter);
+  const filteredSuccessStores = successStores.filter(s => successFilter === 'all' ? true : s.onc === successFilter);
+
   const isFormValid = formData.surveyorName.trim().length > 1 && formData.photo !== null;
 
   const handleExportCSV = () => {
-    if (successStores.length === 0) return alert("Belum ada data untuk diekspor!");
+    if (filteredSuccessStores.length === 0) return alert("Belum ada data untuk diekspor!");
     const headers = ["Nama Toko", "Region", "Surveyor", "Waktu Validasi", "Status", "Jarak Validasi", "ONC?", "Catatan", "Link Foto Asli"];
     const csvContent = [
       headers.join(","),
-      ...successStores.map(store => {
+      ...filteredSuccessStores.map(store => {
         return [
           `"${store.name || ''}"`,
           `"${store.Region || ''}"`,
@@ -836,28 +851,37 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 shrink-0">
-                        {['all', 'pending', 'done'].map((status) => (
-                          <button
-                            key={status}
-                            onClick={() => setStatusFilter(status)}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${statusFilter === status ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                          >
-                            {status === 'all' ? 'Semua' : status === 'pending' ? 'Belum' : 'Selesai'}
-                          </button>
-                        ))}
+                      <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                        <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                          {['all', 'pending', 'done'].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => setStatusFilter(status)}
+                              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${statusFilter === status ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              {status === 'all' ? 'Semua' : status === 'pending' ? 'Belum' : 'Selesai'}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => setIsFilterModalOpen(true)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${selectedKecamatans.length > 0 ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        >
+                          <Filter size={14} />
+                          Kecamatan {selectedKecamatans.length > 0 && `(${selectedKecamatans.length})`}
+                        </button>
                       </div>
                     </div>
 
-                    {Object.keys(groupedData).map(region => (
-                      <div key={region} className="mb-10 animate-in fade-in duration-500">
+                    {Object.keys(groupedData).map(kecamatan => (
+                      <div key={kecamatan} className="mb-10 animate-in fade-in duration-500">
                         <div className="flex items-center gap-3 mb-4">
-                          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{region}</h3>
-                          <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded-full text-slate-600">{groupedData[region].length} TOKO</span>
+                          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{kecamatan}</h3>
+                          <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded-full text-slate-600">{groupedData[kecamatan].length} TOKO</span>
                           <div className="h-px bg-slate-200 flex-1 ml-2" />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                          {groupedData[region].map(store => (
+                          {groupedData[kecamatan].map(store => (
                             <StoreCard key={store.id} store={store} onClick={(s) => { setSelectedStore(s); setIsFormOpen(true); }} />
                           ))}
                         </div>
@@ -975,14 +999,32 @@ export default function App() {
                 {/* VIEW 3: DATA GALLERY */}
                 {activeMenu === 'gallery' && (
                   <div className="max-w-7xl mx-auto animate-in fade-in duration-500">
-                    {galleryStores.length === 0 ? (
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Data Gallery</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredGalleryStores.length} Foto</p>
+                      </div>
+                      <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 shrink-0">
+                        {['all', 'Yes', 'No'].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => setGalleryFilter(status)}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${galleryFilter === status ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            {status === 'all' ? 'Semua' : `ONC: ${status}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {filteredGalleryStores.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
                         <ImageIcon size={64} className="mb-4 opacity-20 text-slate-300" />
-                        <p className="font-bold text-sm text-slate-500">Belum ada foto survei yang tersimpan.</p>
+                        <p className="font-bold text-sm text-slate-500">Belum ada foto yang sesuai dengan filter.</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {galleryStores.map(store => {
+                        {filteredGalleryStores.map(store => {
                           const distanceStrGallery = store['Jarak Validasi'] || store.distanceValidation || '-';
                           const isFarGallery = checkDistanceWarning(distanceStrGallery);
 
@@ -1026,19 +1068,32 @@ export default function App() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
                       <div>
                         <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">List Toko Tervalidasi</h3>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {successStores.length} Toko</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total: {filteredSuccessStores.length} Toko</p>
                       </div>
-                      {successStores.length > 0 && (
-                        <button onClick={handleExportCSV} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-200">
-                          <Download size={16} /> Export Data (.CSV)
-                        </button>
-                      )}
+                      <div className="flex flex-col sm:flex-row items-end gap-3">
+                        <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                          {['all', 'Yes', 'No'].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => setSuccessFilter(status)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${successFilter === status ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              {status === 'all' ? 'Semua' : `ONC: ${status}`}
+                            </button>
+                          ))}
+                        </div>
+                        {filteredSuccessStores.length > 0 && (
+                          <button onClick={handleExportCSV} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-200">
+                            <Download size={16} /> Export Data (.CSV)
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {successStores.length === 0 ? (
+                    {filteredSuccessStores.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-[40vh] text-slate-400">
                         <CheckSquare size={64} className="mb-4 opacity-20 text-slate-300" />
-                        <p className="font-bold text-sm text-slate-500">Belum ada toko yang tervalidasi.</p>
+                        <p className="font-bold text-sm text-slate-500">Belum ada toko yang sesuai dengan filter.</p>
                       </div>
                     ) : (
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1055,7 +1110,7 @@ export default function App() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                              {successStores.map(store => {
+                              {filteredSuccessStores.map(store => {
                                 const distanceStrSuccessTab = store['Jarak Validasi'] || store.distanceValidation || '-';
                                 const isFarSuccessTab = checkDistanceWarning(distanceStrSuccessTab);
 
@@ -1160,22 +1215,22 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Region Progress List */}
+                    {/* Region Progress List -> SEKARANG JADI KECAMATAN PROGRESS LIST */}
                     <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
                       <div className="flex items-center gap-2 mb-6">
                         <MapPin size={16} className="text-blue-500" />
-                        <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.15em]">Progres Per Region</h4>
+                        <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.15em]">Progres Per Kecamatan</h4>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-                        {Object.keys(groupedDataFull).sort().map(region => {
-                          const totalInRegion = groupedDataFull[region].length;
-                          const doneInRegion = groupedDataFull[region].filter(s => s.isDone).length;
+                        {Object.keys(groupedDataFull).sort().map(kecamatan => {
+                          const totalInRegion = groupedDataFull[kecamatan].length;
+                          const doneInRegion = groupedDataFull[kecamatan].filter(s => s.isDone).length;
                           const percent = totalInRegion > 0 ? (doneInRegion / totalInRegion) * 100 : 0;
                           return (
-                            <div key={region} className="flex flex-col gap-2">
+                            <div key={kecamatan} className="flex flex-col gap-2">
                               <div className="flex justify-between items-end">
-                                <span className="text-xs font-black text-slate-700 uppercase">{region}</span>
+                                <span className="text-xs font-black text-slate-700 uppercase">{kecamatan}</span>
                                 <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">{doneInRegion} / {totalInRegion} ({percent.toFixed(0)}%)</span>
                               </div>
                               <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
@@ -1275,32 +1330,47 @@ export default function App() {
 
                       <form onSubmit={(e) => {
                         e.preventDefault();
-                        alert('Terima kasih! Feedback Anda telah berhasil dikirim ke tim Developer.');
-                        e.target.reset();
+                        const form = e.target;
+                        const nama = form.nama.value;
+                        const email = form.email.value;
+                        const kategori = form.kategori.value;
+                        const pesan = form.pesan.value;
+
+                        const subject = encodeURIComponent(`Feedback App Survei: ${kategori}`);
+                        const body = encodeURIComponent(`Halo Tim Developer,\n\nBerikut adalah feedback dari pengguna aplikasi survei:\n\nNama Pengirim: ${nama}\nEmail Pengirim: ${email}\nKategori: ${kategori}\n\nDetail Pesan/Kendala:\n${pesan}\n\nTerima kasih.`);
+
+                        window.location.href = `mailto:suryo.prakoso@garudafood.co.id?subject=${subject}&body=${body}`;
+
+                        alert('Membuka aplikasi Email Anda untuk mengirim feedback... Terima kasih!');
+                        form.reset();
                       }}>
                         <div className="space-y-5">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
                               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Nama Anda</label>
-                              <input type="text" required placeholder="Masukkan nama..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                              <input type="text" name="nama" required placeholder="Masukkan nama..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800" />
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Kategori Feedback</label>
-                              <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-700">
-                                <option>Kendala / Bug Aplikasi</option>
-                                <option>Saran Fitur Baru</option>
-                                <option>Pembaruan Data Toko</option>
-                                <option>Lainnya</option>
-                              </select>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Email Anda</label>
+                              <input type="email" name="email" required placeholder="email@contoh.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800" />
                             </div>
                           </div>
                           <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Kategori Feedback</label>
+                            <select name="kategori" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800">
+                              <option>Kendala / Bug Aplikasi</option>
+                              <option>Saran Fitur Baru</option>
+                              <option>Pembaruan Data Toko</option>
+                              <option>Lainnya</option>
+                            </select>
+                          </div>
+                          <div>
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 px-1">Pesan / Detail Kendala</label>
-                            <textarea rows="5" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" placeholder="Ceritakan pengalaman, kendala, atau saran Anda secara detail di sini..."></textarea>
+                            <textarea name="pesan" rows="5" required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-slate-800" placeholder="Ceritakan pengalaman, kendala, atau saran Anda secara detail di sini..."></textarea>
                           </div>
                           <div className="pt-2">
                             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                              <Send size={18} /> Kirim Feedback Sekarang
+                              <Send size={18} /> Kirim Feedback via Email
                             </button>
                           </div>
                         </div>
@@ -1643,6 +1713,65 @@ export default function App() {
               <p className="text-slate-500 text-xs font-medium mt-2">Laporan sedang disinkronisasi ke Cloud</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL FILTER KECAMATAN */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-lg rounded-[24px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border border-slate-100">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                  <Filter size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 uppercase text-lg leading-tight tracking-tight">Filter Kecamatan</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Pilih satu atau lebih kecamatan</p>
+                </div>
+              </div>
+              <button onClick={() => setIsFilterModalOpen(false)} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+              <div className="flex flex-wrap gap-2.5">
+                <button
+                  onClick={() => setSelectedKecamatans([])}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase transition-all border ${selectedKecamatans.length === 0 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                >
+                  Semua Kecamatan
+                </button>
+                {uniqueKecamatans.map(kec => {
+                  const isActive = selectedKecamatans.includes(kec);
+                  return (
+                    <button
+                      key={kec}
+                      onClick={() => {
+                        if (isActive) {
+                          setSelectedKecamatans(selectedKecamatans.filter(k => k !== kec));
+                        } else {
+                          setSelectedKecamatans([...selectedKecamatans, kec]);
+                        }
+                      }}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase transition-all border flex items-center gap-2 ${isActive ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                      {isActive && <Check size={14} strokeWidth={3} className="text-blue-600" />}
+                      {kec}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-100 bg-white sticky bottom-0 z-10">
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase py-3.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md shadow-blue-200"
+              >
+                <CheckSquare size={18} /> Terapkan Filter
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
