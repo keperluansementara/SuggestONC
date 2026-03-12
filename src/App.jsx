@@ -877,7 +877,17 @@ export default function App() {
             <button onClick={fetchData} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors" title="Sync Data">
               <RefreshCw size={18} className={loading ? 'animate-spin text-blue-600' : ''} />
             </button>
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">S</div>
+
+            {/* --- BAGIAN LOGO KANAN ATAS YANG DIRUBAH --- */}
+            {/* Ganti URL_LOGO_ANDA di bawah ini dengan link gambar logo Anda. */}
+            <img
+              src="SHP.png"
+              alt="Profile"
+              className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5"
+            />
+            {/* Jika Anda hanya ingin mengganti hurufnya, gunakan kode lama ini dan ganti huruf 'S' nya: */}
+            {/* <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">S</div> */}
+
           </div>
         </header>
 
